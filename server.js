@@ -8,12 +8,14 @@ const app = express();
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
-// Initialize KuCoin Exchange Connection
-const kucoin = new ccxt.kucoin({
-    apiKey: process.env.KUCOIN_API_KEY,
-    secret: process.env.KUCOIN_SECRET_KEY,
-    password: process.env.KUCOIN_PASSWORD,
+// Initialize MEXC Exchange Connection via CCXT
+const mexc = new ccxt.mexc({
+    apiKey: process.env.MEXC_API_KEY,
+    secret: process.env.MEXC_SECRET_KEY,
     enableRateLimit: true,
+    options: {
+        adjustForTimeDifference: true, // Prevents synchronization lag errors with MEXC servers
+    }
 });
 
 // Helper function to send Telegram alerts
@@ -40,7 +42,7 @@ const htmlTemplate = `
 <body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center font-sans">
     <div class="max-w-md w-full mx-4 p-8 bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl">
         <div class="text-center mb-8">
-            <h1 class="text-2xl font-black tracking-tight text-indigo-400">XX Exchange</h1>
+            <h1 class="text-2xl font-black tracking-tight text-indigo-400">XZOT Exchange</h1>
             <p class="text-sm text-slate-400 mt-2">Buy USDT (BSC / BEP-20) Instantly via Stripe</p>
         </div>
 
@@ -146,44 +148,50 @@ app.get('/status', (req, res) => {
 });
 
 // --------------------------------------------------------
-// Core Transaction Processor (KuCoin Liquidator Module)
+// Core Transaction Processor (MEXC Liquidator Module)
 // --------------------------------------------------------
 async function processCryptoLiquidation(fiatAmount, cryptoSymbol, walletAddress) {
     try {
-        await sendTelegramAlert(`💳 *Payment Verified!*\n• Amount Received: ${fiatAmount} EUR\n• Proceeding to KuCoin for automated market liquidation...`);
+        await sendTelegramAlert(`💳 *Payment Verified!*\n• Amount Received: ${fiatAmount} EUR\n• Proceeding to MEXC for automated market liquidation...`);
 
         // Calculate custom broker spread profit margin
         const profitMargin = parseFloat(process.env.MY_PROFIT_PERCENT) || 0.03;
         const netTradingFiat = fiatAmount * (1 - profitMargin);
 
-        // Fetch spot execution price for asset pairs from KuCoin
+        // Fetch spot execution price for asset pairs from MEXC (USDT/EUR)
         const marketPair = `${cryptoSymbol}/EUR`;
-        const ticker = await kucoin.fetchTicker(marketPair);
+        const ticker = await mexc.fetchTicker(marketPair);
         const spotPrice = ticker.last;
 
         const assetQuantityToOrder = netTradingFiat / spotPrice;
 
-        // Execute Instant Market Order on KuCoin
-        await sendTelegramAlert(`🔄 *Executing KuCoin Order*\n• Purchasing: ${assetQuantityToOrder.toFixed(4)} ${cryptoSymbol} at Market Price`);
-        const marketOrder = await kucoin.createMarketOrder(marketPair, 'buy', assetQuantityToOrder);
-
-        // Execute Withdraw Request over Binance Smart Chain (BSC / BEP20) Network Chain API
-        await sendTelegramAlert(`🚀 *Initiating On-Chain Settlement*\n• Network: Binance Smart Chain (BEP20)\n• Target Destination: \`${walletAddress}\``);
+        // Execute Instant Market Order on MEXC
+        await sendTelegramAlert(`🔄 *Executing MEXC Order*\n• Purchasing: ${assetQuantityToOrder.toFixed(4)} ${cryptoSymbol} at Market Price`);
         
-        const withdrawal = await kucoin.withdraw(
+        // Note: MEXC requires precise decimal handling. CCXT handles cost execution.
+        const marketOrder = await mexc.createMarketBuyOrder(marketPair, assetQuantityToOrder);
+
+        // Execute Withdraw Request over Binance Smart Chain (BSC / BEP20) Network Chain API on MEXC
+        await sendTelegramAlert(`🚀 *Initiating On-Chain Settlement via MEXC*\n• Network: Binance Smart Chain (BEP20)\n• Target Destination: \`${walletAddress}\``);
+        
+        // Triggers the withdrawal on MEXC infrastructure targeting BSC network
+        const withdrawal = await mexc.withdraw(
             cryptoSymbol,
             assetQuantityToOrder,
             walletAddress,
             undefined,
-            { network: 'BSC' } // Forces KuCoin node engine to route withdrawal through BSC blockchain network
+            { 
+                network: 'BSC', 
+                chain: 'BSC' // Double layer compatibility mapping for MEXC router engine
+            }
         );
 
         // Broadcast Ultimate Completed State Block
-        await sendTelegramAlert(`✅ *Order Settled Successfully!*\n• Tx Settlement ID: \`${withdrawal.id}\`\n• Asset Distributed to client.`);
+        await sendTelegramAlert(`✅ *Order Settled Successfully via MEXC!*\n• Tx Settlement ID: \`${withdrawal.id || 'Processed'}\`\n• Asset Distributed to client.`);
 
     } catch (error) {
-        console.error('Order Fulfilment Critical Failure:', error.message);
-        await sendTelegramAlert(`🚨 *CRITICAL FULFILLMENT FAILURE*\n• Reason: ${error.message}\n• Action Required: Manual intervention required for fiat amount ${fiatAmount} EUR targeting wallet \`${walletAddress}\``);
+        console.error('MEXC Fulfillment Critical Failure:', error.message);
+        await sendTelegramAlert(`🚨 *CRITICAL FULFILLMENT FAILURE (MEXC)*\n• Reason: ${error.message}\n• Action Required: Manual intervention required for fiat amount ${fiatAmount} EUR targeting wallet \`${walletAddress}\``);
     }
 }
 
@@ -208,7 +216,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
         const cryptoSymbol = session.metadata.cryptoSymbol;
         const walletAddress = session.metadata.walletAddress;
 
-        // Run full crypto purchase pipeline async to prevent webhook request timeouts
+        // Run full MEXC crypto purchase pipeline async to prevent webhook request timeouts
         processCryptoLiquidation(fiatAmount, cryptoSymbol, walletAddress);
     }
 
@@ -217,4 +225,4 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
 
 // Run Application Listener 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`XX-Exchange secure server running fine on port ${PORT}`));
+app.listen(PORT, () => console.log(`XZOT-Exchange secure MEXC server running fine on port ${PORT}`));
