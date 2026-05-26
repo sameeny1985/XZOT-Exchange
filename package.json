@@ -1,7 +1,7 @@
 {
-  "name": "xzot-paysafe-exchange",
-  "version": "1.1.0",
-  "description": "Semi-Automated Paysafecard to USDT Exchange via MEXC",
+  "name": "xzot-secure-exchange",
+  "version": "2.0.0",
+  "description": "Multi-Asset Semi-Automated Exchange with KYC and SEPA/Paysafe Support",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -10,6 +10,8 @@
     "ccxt": "^4.2.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.13",
     "telegraf": "^4.16.3"
   },
   "engines": {
