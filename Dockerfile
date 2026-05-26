@@ -1,13 +1,20 @@
-FROM node:22-slim
+# استفاده از نسخه پایدار و سبک نود جی‌اس
+FROM node:18-alpine
 
+# تعیین پوشه کاری درون سرور
 WORKDIR /app
 
-COPY package.json ./
+# کپی کردن فایل‌های پکیج برای نصب نیازمندی‌ها
+COPY package*.json ./
 
-RUN npm install --no-audit --progress=false
+# نصب پکیج‌ها بدون دیتای اضافی
+RUN npm install --production
 
+# کپی کردن بقیه کدهای پروژه (مثل server.js و پوشه public)
 COPY . .
 
-EXPOSE 3000
+# باز کردن پورت ۸۰۸۰ که در کدهای سرور تنظیم کردیم
+EXPOSE 8080
 
+# دستور نهایی برای روشن کردن صرافی
 CMD ["npm", "start"]
