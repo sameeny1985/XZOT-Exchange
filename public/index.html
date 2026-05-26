@@ -1,151 +1,219 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>شارژ آنی تتر | پرداخت با Paysafecard</title>
+    <title>XZOT Luxury Secure Exchange</title>
     <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, sans-serif; 
-            background-color: #0f0f12; 
-            color: #f3f4f6; 
-            padding: 40px 20px; 
-            direction: rtl;
-        }
-        .card { 
-            max-width: 420px; 
-            margin: 0 auto; 
-            background: #1a1a24; 
-            padding: 30px; 
-            border-radius: 12px; 
-            border: 1px solid #ffdd00; 
-            box-shadow: 0 8px 24px rgba(0,0,0,0.6); 
-        }
-        h2 { 
-            color: #ffdd00; 
-            margin-bottom: 5px; 
-            text-align: center;
-        }
-        p.subtitle {
-            font-size: 13px; 
-            color: #9ca3af; 
-            margin-top: 0;
-            text-align: center;
-            margin-bottom: 25px;
-        }
-        label { 
-            display: block; 
-            text-align: right; 
-            margin-top: 15px; 
-            font-size: 13px; 
-            color: #9ca3af; 
-        }
-        input { 
-            width: 100%; 
-            padding: 12px; 
-            margin-top: 5px; 
-            border-radius: 6px; 
-            border: 1px solid #374151; 
-            background: #262636; 
-            color: #fff; 
-            box-sizing: border-box; 
-            text-align: left; 
-            direction: ltr;
-        }
-        input:focus { 
-            border-color: #ffdd00; 
-            outline: none; 
-        }
-        .btn { 
-            width: 100%; 
-            padding: 14px; 
-            background: #ffdd00; 
-            color: #000; 
-            border: none; 
-            border-radius: 6px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            margin-top: 25px; 
-            font-size: 16px; 
-            transition: 0.2s; 
-        }
-        .btn:hover { 
-            background: #e6c800; 
-        }
-        .status-box { 
-            margin-top: 15px; 
-            font-size: 14px; 
-            display: none; 
-            padding: 12px; 
-            border-radius: 6px; 
-            text-align: center;
-        }
-        .success { background-color: #10b981; color: #fff; }
-        .error { background-color: #ef4444; color: #fff; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #0f0f12; color: #f3f4f6; padding: 30px 15px; direction: ltr; }
+        .container { max-width: 500px; margin: 0 auto; background: #1a1a24; padding: 30px; border-radius: 12px; border: 1px solid #ffdd00; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+        h2 { color: #ffdd00; text-align: center; margin-bottom: 5px; }
+        p.info { text-align: center; color: #9ca3af; font-size: 13px; margin-bottom: 25px; }
+        .step { display: none; }
+        .step.active { display: block; }
+        label { display: block; margin-top: 15px; font-size: 13px; color: #9ca3af; }
+        input, select { width: 100%; padding: 12px; margin-top: 5px; border-radius: 6px; border: 1px solid #374151; background: #262636; color: #fff; box-sizing: border-box; }
+        input:focus, select:focus { border-color: #ffdd00; outline: none; }
+        .btn-group { display: flex; gap: 10px; margin-top: 25px; }
+        .btn { flex: 1; padding: 14px; background: #ffdd00; color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px; text-align: center; transition: 0.2s; }
+        .btn:hover { background: #e6c800; }
+        .btn-secondary { background: #4b5563; color: #fff; }
+        .btn-secondary:hover { background: #374151; }
+        .bank-box { background: #262636; border: 1px dashed #ffdd00; padding: 15px; border-radius: 6px; margin-top: 10px; font-family: monospace; font-size: 13px; }
+        #statusBox { margin-top: 20px; padding: 12px; border-radius: 6px; text-align: center; display: none; background: #10b981; color: #fff; }
+        .notice { font-size: 12px; color: #ffdd00; margin-top: 5px; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>شارژ آنی تتر (USDT)</h2>
-    <p class="subtitle">پرداخت امن با ووچر Paysafecard یورو / دلار</p>
-    
-    <form id="paysafeForm">
-        <label>مقدار ووچر (EUR/USD):</label>
-        <input type="number" id="amount" placeholder="مثلاً 25, 50, 100" required>
+<div class="container">
+    <h2>XZOT Exchange</h2>
+    <p class="info">Secure & Instant Fiat-to-Crypto Gateway (EUR Dedicated)</p>
 
-        <label>کد ۱۶ رقمی Paysafecard PIN:</label>
-        <input type="text" id="pin" placeholder="XXXX-XXXX-XXXX-XXXX" required>
+    <form id="exchangeForm" enctype="multipart/form-data">
+        
+        <div class="step active" id="step1">
+            <h3 style="color:#ffdd00;">Step 1: Identity Verification</h3>
+            
+            <label>Your Email Address (For Order Receipt):</label>
+            <input type="email" id="email" name="email" placeholder="name@example.com" required>
 
-        <label>آدرس ولت تتر مشتری (شبکه BSC / BEP20):</label>
-        <input type="text" id="wallet" placeholder="0x..." required>
+            <label>ID Card / Passport - FRONT SIDE:</label>
+            <input type="file" id="idFront" name="idFront" accept="image/*" required>
 
-        <button type="submit" class="btn">ثبت سفارش و ارسال جهت بررسی</button>
+            <label>ID Card / Passport - BACK SIDE:</label>
+            <input type="file" id="idBack" name="idBack" accept="image/*" required>
+
+            <div class="btn-group">
+                <button type="button" class="btn" onclick="nextStep(2)">Verify & Continue</button>
+            </div>
+        </div>
+
+        <div class="step" id="step2">
+            <h3 style="color:#ffdd00;">Step 2: Asset & Wallet</h3>
+            
+            <label>Select Crypto Asset (KuCoin Supported):</label>
+            <select id="crypto" name="crypto" onchange="updateNetworks()">
+                <option value="USDT">USDT (Tether)</option>
+                <option value="BTC">BTC (Bitcoin)</option>
+                <option value="ETH">ETH (Ethereum)</option>
+                <option value="XRP">XRP (Ripple)</option>
+                <option value="SOL">SOL (Solana)</option>
+            </select>
+
+            <label>Select Network:</label>
+            <select id="network" name="network" onchange="showNetworkWarning()">
+                </select>
+            <div id="networkNotice" class="notice"></div>
+
+            <label>Enter Destination Wallet Address:</label>
+            <input type="text" id="wallet" name="wallet" placeholder="Enter valid address" required>
+
+            <label>Confirm Wallet Address:</label>
+            <input type="text" id="walletConfirm" placeholder="Re-enter to confirm address" required>
+
+            <div class="btn-group">
+                <button type="button" class="btn btn-secondary" onclick="prevStep(1)">Back</button>
+                <button type="button" class="btn" onclick="validateStep2()">Continue</button>
+            </div>
+        </div>
+
+        <div class="step" id="step3">
+            <h3 style="color:#ffdd00;">Step 3: Settlement (EUR)</h3>
+            
+            <label>Enter Amount to Exchange (EUR):</label>
+            <input type="number" id="amount" name="amount" placeholder="Minimum 25 EUR" required>
+
+            <label>Select Payment Method:</label>
+            <select id="paymentMethod" name="paymentMethod" onchange="togglePaymentFields()">
+                <option value="sepa">SEPA Instant Bank Transfer</option>
+                <option value="paysafe">Paysafecard Voucher PIN</option>
+            </select>
+
+            <div id="sepaPanel" style="display: block;">
+                <label>Transfer money instantly to our Bank Account:</label>
+                <div class="bank-box">
+                    <strong>IBAN:</strong> BE96 0000 1111 2222<br>
+                    <strong>BIC/SWIFT:</strong> GKCCBEBBXXX<br>
+                    <strong>Holder:</strong> XZOT Exchange Group
+                </div>
+                <label>Upload SEPA Instant Bank Receipt:</label>
+                <input type="file" id="receipt" name="receipt" accept="image/*,application/pdf">
+            </div>
+
+            <div id="paysafePanel" style="display: none;">
+                <label>Enter 16-Digit Paysafecard PIN:</label>
+                <input type="text" id="paysafePin" name="paysafePin" placeholder="XXXX-XXXX-XXXX-XXXX">
+            </div>
+
+            <p style="font-size: 12px; color: #9ca3af; margin-top: 15px;">* Crypto will be released to your wallet address immediately after admin verification.</p>
+
+            <div class="btn-group">
+                <button type="button" class="btn btn-secondary" onclick="prevStep(2)">Back</button>
+                <button type="submit" class="btn">Submit Exchange Order</button>
+            </div>
+        </div>
+
     </form>
 
-    <div id="statusMessage" class="status-box"></div>
+    <div id="statusBox"></div>
 </div>
 
 <script>
-    document.getElementById('paysafeForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const amount = document.getElementById('amount').value;
-        const pin = document.getElementById('pin').value;
-        const wallet = document.getElementById('wallet').value;
-        const statusBox = document.getElementById('statusMessage');
+    const networks = {
+        USDT: ['TRC20', 'ERC20', 'Polygon', 'Arbitrum'],
+        BTC: ['Bitcoin'],
+        ETH: ['ERC20', 'Arbitrum', 'Optimism'],
+        XRP: ['Ripple'],
+        SOL: ['Solana']
+    };
 
-        // مخفی کردن وضعیت قبلی
-        statusBox.style.display = 'none';
-        statusBox.className = 'status-box';
+    function updateNetworks() {
+        const crypto = document.getElementById('crypto').value;
+        const networkSelect = document.getElementById('network');
+        networkSelect.innerHTML = '';
+        
+        networks[crypto].forEach(net => {
+            let opt = document.createElement('option');
+            opt.value = net;
+            opt.innerText = net;
+            networkSelect.appendChild(opt);
+        });
+        showNetworkWarning();
+    }
+
+    function showNetworkWarning() {
+        const crypto = document.getElementById('crypto').value;
+        const network = document.getElementById('network').value;
+        document.getElementById('networkNotice').innerText = `Make sure your destination wallet supports ${crypto} on the ${network} network!`;
+    }
+
+    function togglePaymentFields() {
+        const method = document.getElementById('paymentMethod').value;
+        if(method === 'sepa') {
+            document.getElementById('sepaPanel').style.display = 'block';
+            document.getElementById('paysafePanel').style.display = 'none';
+        } else {
+            document.getElementById('sepaPanel').style.display = 'none';
+            document.getElementById('paysafePanel').style.display = 'block';
+        }
+    }
+
+    function nextStep(stepNum) {
+        if(stepNum === 2 && !document.getElementById('email').value) {
+            alert('Please fill out your email.');
+            return;
+        }
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById('step' + stepNum).classList.add('active');
+    }
+
+    function prevStep(stepNum) {
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById('step' + stepNum).classList.add('active');
+    }
+
+    function validateStep2() {
+        const w1 = document.getElementById('wallet').value;
+        const w2 = document.getElementById('walletConfirm').value;
+        if(!w1 || w1 !== w2) {
+            alert('Wallet addresses do not match or are empty!');
+            return;
+        }
+        nextStep(3);
+    }
+
+    // مقداردهی اولیه شبکه‌ها در لود اول صفحه
+    updateNetworks();
+
+    // هندل ارسال فرم به بک‌اند کویب
+    document.getElementById('exchangeForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const statusBox = document.getElementById('statusBox');
+        statusBox.style.display = 'block';
+        statusBox.style.background = '#4b5563';
+        statusBox.innerText = 'Uploading documents and creating order...';
+
+        const formData = new FormData(this);
 
         try {
-            const response = await fetch('/api/submit-paysafe', {
+            const response = await fetch('/api/submit-order', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ amount, pin, wallet })
+                body: formData
             });
-
             const data = await response.json();
-
-            if (data.success) {
-                statusBox.classList.add('success');
-                statusBox.innerText = '✅ سفارش شما با موفقیت ثبت شد و در صف تایید مدیر قرار گرفت.';
-                statusBox.style.display = 'block';
-                // فرم را خالی کن
-                document.getElementById('paysafeForm').reset();
+            if(data.success) {
+                statusBox.style.background = '#10b981';
+                statusBox.innerText = '✅ Order successfully sent! Crypto will be transferred upon verification.';
+                this.reset();
+                setTimeout(() => prevStep(1), 5000);
             } else {
-                statusBox.classList.add('error');
-                statusBox.innerText = '❌ خطا: ' + (data.message || 'مشکلی در ثبت سفارش پیش آمد.');
-                statusBox.style.display = 'block';
+                statusBox.style.background = '#ef4444';
+                statusBox.innerText = '❌ Error: ' + data.message;
             }
-
-        } catch (error) {
-            statusBox.classList.add('error');
-            statusBox.innerText = '❌ خطا در اتصال به سرور صرافی.';
-            statusBox.style.display = 'block';
+        } catch (err) {
+            statusBox.style.background = '#ef4444';
+            statusBox.innerText = '❌ Connection error to the exchange server.';
         }
     });
 </script>
