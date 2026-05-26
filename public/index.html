@@ -72,7 +72,7 @@
         .btn:hover { 
             background: #e6c800; 
         }
-        #statusMessage { 
+        .status-box { 
             margin-top: 15px; 
             font-size: 14px; 
             display: none; 
@@ -103,7 +103,7 @@
         <button type="submit" class="btn">ثبت سفارش و ارسال جهت بررسی</button>
     </form>
 
-    <div id="statusMessage"></div>
+    <div id="statusMessage" class="status-box"></div>
 </div>
 
 <script>
@@ -117,6 +117,7 @@
 
         // مخفی کردن وضعیت قبلی
         statusBox.style.display = 'none';
+        statusBox.className = 'status-box';
 
         try {
             const response = await fetch('/api/submit-paysafe', {
@@ -130,19 +131,19 @@
             const data = await response.json();
 
             if (data.success) {
-                statusBox.className = 'status-box success';
+                statusBox.classList.add('success');
                 statusBox.innerText = '✅ سفارش شما با موفقیت ثبت شد و در صف تایید مدیر قرار گرفت.';
                 statusBox.style.display = 'block';
                 // فرم را خالی کن
                 document.getElementById('paysafeForm').reset();
             } else {
-                statusBox.className = 'status-box error';
+                statusBox.classList.add('error');
                 statusBox.innerText = '❌ خطا: ' + (data.message || 'مشکلی در ثبت سفارش پیش آمد.');
                 statusBox.style.display = 'block';
             }
 
         } catch (error) {
-            statusBox.className = 'status-box error';
+            statusBox.classList.add('error');
             statusBox.innerText = '❌ خطا در اتصال به سرور صرافی.';
             statusBox.style.display = 'block';
         }
