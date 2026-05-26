@@ -1,16 +1,19 @@
 {
-  "name": "xx-exchange-automated",
+  "name": "xzot-exchange-onramp",
   "version": "1.0.0",
-  "description": "Automated USDT-BSC Fiat Gateway with Stripe Identity and KuCoin",
+  "description": "Crypto On-Ramp Gateway via Transak & MoonPay",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
+    "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "stripe": "^15.12.0",
-    "ccxt": "^4.3.0",
-    "telegraf": "^4.16.3",
-    "dotenv": "^16.4.5"
-  }
+    "telegraf": "^4.16.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Said Hassan Ameeny-Pour",
+  "license": "ISC"
 }
