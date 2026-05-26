@@ -3,30 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>خرید تتر با Paysafecard</title>
+    <title>شارژ آنی تتر | پرداخت با Paysafecard</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #0f0f12; color: #f3f4f6; padding: 40px 20px; }
-        .card { max-width: 420px; margin: 0 auto; background: #1a1a24; padding: 30px; border-radius: 12px; border: 1px solid #ffdd00; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
-        h2 { color: #ffdd00; margin-bottom: 5px; }
-        label { display: block; text-align: right; margin-top: 15px; font-size: 13px; color: #9ca3af; }
-        input { width: 100%; padding: 12px; margin-top: 5px; border-radius: 6px; border: 1px solid #374151; background: #262636; color: #fff; box-sizing: border-box; text-align: left; }
-        input:focus { border-color: #ffdd00; outline: none; }
-        .btn { width: 100%; padding: 14px; background: #ffdd00; color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 25px; font-size: 16px; transition: 0.2s; }
-        .btn:hover { background: #e6c800; }
-        .status-box { margin-top: 15px; font-size: 14px; display: none; padding: 10px; border-radius: 6px; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: #0f0f12; 
+            color: #f3f4f6; 
+            padding: 40px 20px; 
+            direction: rtl;
+        }
+        .card { 
+            max-width: 420px; 
+            margin: 0 auto; 
+            background: #1a1a24; 
+            padding: 30px; 
+            border-radius: 12px; 
+            border: 1px solid #ffdd00; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6); 
+        }
+        h2 { 
+            color: #ffdd00; 
+            margin-bottom: 5px; 
+            text-align: center;
+        }
+        p.subtitle {
+            font-size: 13px; 
+            color: #9ca3af; 
+            margin-top: 0;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        label { 
+            display: block; 
+            text-align: right; 
+            margin-top: 15px; 
+            font-size: 13px; 
+            color: #9ca3af; 
+        }
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            margin-top: 5px; 
+            border-radius: 6px; 
+            border: 1px solid #374151; 
+            background: #262636; 
+            color: #fff; 
+            box-sizing: border-box; 
+            text-align: left; 
+            direction: ltr;
+        }
+        input:focus { 
+            border-color: #ffdd00; 
+            outline: none; 
+        }
+        .btn { 
+            width: 100%; 
+            padding: 14px; 
+            background: #ffdd00; 
+            color: #000; 
+            border: none; 
+            border-radius: 6px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            margin-top: 25px; 
+            font-size: 16px; 
+            transition: 0.2s; 
+        }
+        .btn:hover { 
+            background: #e6c800; 
+        }
+        #statusMessage { 
+            margin-top: 15px; 
+            font-size: 14px; 
+            display: none; 
+            padding: 12px; 
+            border-radius: 6px; 
+            text-align: center;
+        }
+        .success { background-color: #10b981; color: #fff; }
+        .error { background-color: #ef4444; color: #fff; }
     </style>
 </head>
 <body>
 
 <div class="card">
     <h2>شارژ آنی تتر (USDT)</h2>
-    <p style="font-size: 13px; color: #9ca3af; margin-top: 0;">پرداخت امن با ووچر Paysafecard یورو</p>
+    <p class="subtitle">پرداخت امن با ووچر Paysafecard یورو / دلار</p>
     
     <form id="paysafeForm">
-        <label>مقدار ووچر (EUR):</label>
+        <label>مقدار ووچر (EUR/USD):</label>
         <input type="number" id="amount" placeholder="مثلاً 25, 50, 100" required>
 
         <label>کد ۱۶ رقمی Paysafecard PIN:</label>
-        <input type="text" id="pin" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="19" required>
+        <input type="text" id="pin" placeholder="XXXX-XXXX-XXXX-XXXX" required>
 
-        <label>آدرس ول
+        <label>آدرس ولت تتر مشتری (شبکه BSC / BEP20):</label>
+        <input type="text" id="wallet" placeholder="0x..." required>
+
+        <button type="submit" class="btn">ثبت سفارش و ارسال جهت بررسی</button>
+    </form>
+
+    <div id="statusMessage"></div>
+</div>
+
+<script>
+    document.getElementById('paysafeForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const amount = document.getElementById('amount').value;
+        const pin = document.getElementById('pin').value;
+        const wallet = document.getElementById('wallet').value;
+        const statusBox = document.getElementById('statusMessage');
+
+        // مخفی کردن وضعیت قبلی
+        statusBox.style.display = 'none';
+
+        try {
+            const response = await fetch('/api/submit-paysafe', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ amount, pin, wallet })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                statusBox.className = 'status-box success';
+                statusBox.innerText = '✅ سفارش شما با موفقیت ثبت شد و در صف تایید مدیر قرار گرفت.';
+                statusBox.style.display = 'block';
+                // فرم را خالی کن
+                document.getElementById('paysafeForm').reset();
+            } else {
+                statusBox.className = 'status-box error';
+                statusBox.innerText = '❌ خطا: ' + (data.message || 'مشکلی در ثبت سفارش پیش آمد.');
+                statusBox.style.display = 'block';
+            }
+
+        } catch (error) {
+            statusBox.className = 'status-box error';
+            statusBox.innerText = '❌ خطا در اتصال به سرور صرافی.';
+            statusBox.style.display = 'block';
+        }
+    });
+</script>
+
+</body>
+</html>
