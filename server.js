@@ -1,111 +1,107 @@
 require('dotenv').config();
 const express = require('express');
-const { Telegraf } = require('telegraf');
+const { Telegraf, Markup } = require('telegraf');
 const ccxt = require('ccxt');
 
 const app = express();
 const port = process.env.PORT || 8080;
 
-// تنظیمات ربات تلگرام
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
-// تنظیمات صرافی مکسی (برای خرید خودکار پس از تایید شما)
 const mexc = new ccxt.mexc({
     apiKey: process.env.MEXC_API_KEY,
     secret: process.env.MEXC_SECRET_KEY,
 });
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
-// ذخیره موقت سفارش‌ها در حافظه سرور برای تایید دستی
 const pendingOrders = {};
 
-// ۱. دریافت اطلاعات فرم پی‌سیف‌کارت از سایت
+// ۱. دریافت اطلاعات از سایت و ارسال به تلگرام با دکمه شیشه‌ای
 app.post('/api/submit-paysafe', async (req, res) => {
     const { amount, wallet, pin } = req.body;
 
     if (!amount || !wallet || !pin) {
-        return res.status(400).json({ success: false, message: 'تمام فیلدها الزامی هستند.' });
+        return res.status(400).json({ success: false, message: 'اطلاعات ناقص است.' });
     }
 
     const orderId = 'ORD-' + Date.now();
-    
-    // ذخیره سفارش در لیست انتظار
     pendingOrders[orderId] = { amount, wallet, pin, status: 'PENDING' };
 
-    // ارسال پیام به کانال/گروه تلگرام شما به همراه دکمه تایید
     const alertMessage = `💳 *سفارش پی‌سیف‌کارت جدید*\n\n` +
-                         `🆔 *آیدی سفارش:* \`${orderId}\`\n` +
-                         `💵 *مبلغ اعلامی:* ${amount} EUR\n` +
+                         `🆔 *آیدی:* \`${orderId}\`\n` +
+                         `💵 *مبلغ:* ${amount} EUR\n` +
                          `🔑 *کد ۱۶ رقمی:* \`${pin}\`\n` +
-                         `👛 *ولت مقصد (BSC):* \`${wallet}\`\n\n` +
-                         `⚠️ *اقدام لازم:* ابتدا کد را در اکانت Paysafecard خود وارد کنید. در صورت شارژ موفق، دستور زیر را برای ربات بفرستید:\n\n` +
-                         `/approve ${orderId}`;
+                         `👛 *ولت مشتری:* \`${wallet}\`\n\n` +
+                         `👇 پس از اطمینان از نقد شدن کارت، روی دکمه زیر کلیک کنید:`;
 
     try {
-        await bot.telegram.sendMessage(process.env.TELEGRAM_CHANNEL_ID, alertMessage, { parse_mode: 'Markdown' });
-        res.json({ success: true, message: 'سفارش شما ثبت شد و در حال بررسی است.' });
+        // ساخت دکمه شیشه‌ای تایید و رد سفارش
+        await bot.telegram.sendMessage(
+            process.env.TELEGRAM_CHANNEL_ID, 
+            alertMessage, 
+            {
+                parse_mode: 'Markdown',
+                ...Markup.inlineKeyboard([
+                    [
+                        Markup.button.callback('✅ تایید و واریز تتر', `approve_${orderId}`),
+                        Markup.button.callback('❌ رد سفارش', `reject_${orderId}`)
+                    ]
+                ])
+            }
+        );
+        res.json({ success: true });
     } catch (err) {
-        console.error('Telegram Error:', err);
-        res.status(500).json({ success: false, message: 'خطا در ارتباط با سرور تلگرام' });
+        res.status(500).json({ success: false, message: 'خطا در ارتباط با تلگرام' });
     }
 });
 
-// ۲. پردازش دستور تایید از طرف شما در تلگرام
-bot.command('approve', async (ctx) => {
-    const text = ctx.message.text; // مثل: /approve ORD-12345
-    const parts = text.split(' ');
-    const orderId = parts[1];
-
-    if (!orderId || !pendingOrders[orderId]) {
-        return ctx.reply('❌ آیدی سفارش معتبر نیست یا منقضی شده است.');
-    }
+// ۲. پردازش کلیک روی دکمه‌های شیشه‌ای
+bot.on('callback_query', async (ctx) => {
+    const callbackData = ctx.callbackQuery.data; // مثلا: approve_ORD-12345
+    const [action, orderId] = callbackData.split('_');
 
     const order = pendingOrders[orderId];
 
-    if (order.status !== 'PENDING') {
-        return ctx.reply('⚠️ این سفارش قبلاً پردازش شده است.');
+    if (!order) {
+        return ctx.answerCbQuery('❌ سفارش یافت نشد یا منقضی شده است.', { show_alert: true });
     }
 
-    ctx.reply(`⏳ در حال پردازش سفارش \`${orderId}\`... اتصال به صرافی مکسی و خرید تتر.`, { parse_mode: 'Markdown' });
+    if (order.status !== 'PENDING') {
+        return ctx.answerCbQuery('⚠️ این سفارش قبلاً بررسی شده است.', { show_alert: true });
+    }
 
-    try {
-        // الف) گرفتن قیمت لحظه‌ای تتر به یورو از مکسی
-        const ticker = await mexc.fetchTicker('USDT/EUR');
-        const spotPrice = ticker.last;
+    if (action === 'reject') {
+        order.status = 'REJECTED';
+        await ctx.editMessageText(`❌ *سفارش ${orderId} توسط مدیر رد شد.*`, { parse_mode: 'Markdown' });
+        return ctx.answerCbQuery('سفارش رد شد.');
+    }
 
-        // ب) کسر کارمزد و سود شما (مثلاً کسر ۵ درصد کارمزد برای ریسک پی‌سیف‌کارت)
-        const profitPercent = parseFloat(process.env.MY_PROFIT_PERCENT || '0.05');
-        const netEuro = order.amount * (1 - profitPercent);
-        
-        // ج) محاسبه تعداد تتر قابل خرید
-        const usdtAmount = (netEuro / spotPrice).toFixed(2);
+    if (action === 'approve') {
+        // اطلاع‌رسانی اولیه روی دکمه
+        ctx.answerCbQuery('⏳ در حال خرید و انتقال تتر...');
+        await ctx.editMessageText(`⏳ *سفارش ${orderId} در حال پردازش خودکار صرافی...*`, { parse_mode: 'Markdown' });
 
-        // د) ارسال دستور خرید مارکت به مکسی
-        // Note: در صرافی‌ها خرید مارکت بر اساس حجم ارز پایه انجام می‌شود
-        await mexc.createMarketBuyOrder('USDT/EUR', usdtAmount);
+        try {
+            // محاسبه کارمزد (کارمزد پی‌سیف + کارمزد شما، مثلاً جمعاً ۱۵ درصد)
+            const profitPercent = parseFloat(process.env.MY_PROFIT_PERCENT || '0.15');
+            const netAmount = order.amount * (1 - profitPercent);
+            const usdtToWithdraw = netAmount.toFixed(2);
 
-        // ه) برداشت تتر از مکسی و واریز به ولت BSC مشتری
-        // مکس برای برداشت نیاز به آدرس، مقدار و شبکه (BSC/BEP20) دارد
-        await mexc.withdraw('USDT', usdtAmount, order.wallet, undefined, { network: 'BSC' });
+            // انتقال مستقیم تتر از مکسی به ولت مشتری
+            await mexc.withdraw('USDT', usdtToWithdraw, order.wallet, undefined, { network: 'BSC' });
 
-        // تغییر وضعیت سفارش
-        order.status = 'COMPLETED';
+            order.status = 'COMPLETED';
+            await ctx.editMessageText(`✅ *سفارش ${orderId} با موفقیت تکمیل شد!*\n💰 مقدار *${usdtToWithdraw} USDT* به ولت مشتری واریز شد.`, { parse_mode: 'Markdown' });
 
-        ctx.reply(`✅ *سفارش ${orderId} با موفقیت تکمیل شد!*\n\n` +
-                  `💰 مقدار *${usdtAmount} USDT* پس از کسر کارمزد خریداری و به شبکه BSC واریز شد.`, { parse_mode: 'Markdown' });
-
-    } catch (error) {
-        console.error('Execution Error:', error);
-        ctx.reply(`❌ *خطا در اجرای خودکار سفارش:* \n${error.message}`, { parse_mode: 'Markdown' });
+        } catch (error) {
+            order.status = 'FAILED';
+            await ctx.editMessageText(`❌ *خطا در صرافی:* \n${error.message}`, { parse_mode: 'Markdown' });
+        }
     }
 });
 
-// لانچ کردن ربات تلگرام برای گوش دادن به دستورات شما
 bot.launch();
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
+app.listen(port, () => console.log(`Server running on port ${port}`));
