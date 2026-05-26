@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صرافی آنلاین | خرید مستقیم USDT</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; background-color: #121212; color: #fff; text-align: center; padding: 50px; }
+        .container { max-width: 450px; margin: 0 auto; background: #1e1e1e; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; box-sizing: border-box; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; color: white; }
+        .btn-transak { background-color: #0066ff; }
+        .btn-moonpay { background-color: #7b2cbf; }
+    </style>
+    <script src="https://cdn.transak.com/js/download/1.4.3/transak.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <h2>بستر امن خرید مستقیم تتر (USDT)</h2>
+    <p>پرداخت با دلار و یورو - احراز هویت هوشمند و آنی</p>
+    
+    <input type="number" id="amount" placeholder="مقدار به یورو یا دلار (مثلاً 100)" required>
+    <input type="text" id="wallet" placeholder="آدرس ولت تتر (BSC / BEP20)" required>
+    
+    <button class="btn btn-transak" onclick="payWithTransak()">پرداخت با Transak (کارت بانکی/گوگل‌پای)</button>
+    <button class="btn btn-moonpay" onclick="payWithMoonPay()">پرداخت با MoonPay (اعتباری/Apple Pay)</button>
+</div>
+
+<script>
+    // تابع مشترک برای ارسال وضعیت سفارش به سرور جهت نوتیفیکیشن تلگرام
+    async function notifyTelegram(amount, wallet, gateway) {
+        await fetch('/api/initiate-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount, wallet, gateway })
+        });
+    }
+
+    // ۱. اجرای درگاه ترنزک
+    function payWithTransak() {
+        const amount = document.getElementById('amount').value;
+        const wallet = document.getElementById('wallet').value;
+
+        if(!amount || !wallet) { alert('لطفاً تمام فیلدها را پر کنید'); return; }
+
+        notifyTelegram(amount, wallet, 'transak');
+
+        const transak = new TransakSDK.default({
+            apiKey: 'YOUR_TRANSAK_API_KEY_HERE', // یا پنجره داینامیک از متغیرها
+            environment: 'PRODUCTION', 
+            cryptoCurrencyCode: 'USDT',
+            network: 'bsc',
+            fiatAmount: amount,
+            walletAddress: wallet, 
+            themeColor: '#0066ff',
+            partnerOrderId: 'Order-' + Date.now()
+        });
+
+        transak.init();
+    }
+
+    // ۲. اجرای درگاه مون‌پی
+    function payWithMoonPay() {
+        const amount = document.getElementById('amount').value;
+        const wallet = document.getElementById('wallet').value;
+
+        if(!amount || !wallet) { alert('لطفاً تمام فیلدها را پر کنید'); return; }
+
+        notifyTelegram(amount, wallet, 'moonpay');
+
+        // ساخت لینک داینامیک ویجت مون‌پی
+        const moonPayUrl = `https://buy.moonpay.com?apiKey=YOUR_MOONPAY_PUBLIC_KEY_HERE&cryptoCurrencyCode=usdt&netork=binance&baseCurrencyAmount=${amount}&walletAddress=${wallet}`;
+        
+        // باز کردن درگاه مون‌پی در یک پنجره جدید پویا
+        window.open(moonPayUrl, '_blank', 'width=500,height=700');
+    }
+</script>
+
+</body>
+</html>
