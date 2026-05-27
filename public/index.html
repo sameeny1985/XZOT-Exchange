@@ -52,9 +52,11 @@
         <div class="step" id="step2">
             <h3 style="color:#ffdd00;">Step 2: Asset & Wallet</h3>
             
-            <label>Select Crypto Asset (KuCoin Supported):</label>
+            <label>Select Crypto Asset :</label>
             <select id="crypto" name="crypto" onchange="updateNetworks()">
                 <option value="USDT">USDT (Tether)</option>
+                <option value="BNB">BNB (BNB)</option>
+                <option value="SHIB">SHIB (Shiba Inu)</option>
                 <option value="BTC">BTC (Bitcoin)</option>
                 <option value="ETH">ETH (Ethereum)</option>
                 <option value="XRP">XRP (Ripple)</option>
@@ -121,7 +123,9 @@
 
 <script>
     const networks = {
-        USDT: ['TRC20', 'ERC20', 'Polygon', 'Arbitrum'],
+        USDT: ['BEP20 (Binance Smart Chain)', 'TRC20 (Tron Network)', 'ERC20 (Ethereum Network)', 'Polygon'],
+        BNB: ['BEP20 (Binance Smart Chain)'],
+        SHIB: ['BEP20 (Binance Smart Chain)', 'ERC20 (Ethereum Network)'],
         BTC: ['Bitcoin'],
         ETH: ['ERC20', 'Arbitrum', 'Optimism'],
         XRP: ['Ripple'],
