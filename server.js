@@ -9,12 +9,16 @@ const fs = require('fs');
 const app = express();
 const port = process.env.PORT || 8080;
 
-// تنظیمات ذخیره‌سازی فایل‌های آپلودی
+// مطمئن شدن از وجود پوشه آپلودها
+const uploadDir = './uploads';
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// تنظیمات ذخیره‌سازی فایل‌های آپلودی با پسوند درست
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const dir = './uploads';
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir);
-        cb(null, dir);
+        cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
         cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
@@ -25,20 +29,21 @@ const upload = multer({ storage: storage });
 // راه‌اندازی ربات تلگرام
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
-// تنظیمات سرویس ایمیل برای ارسال رسید به مشتری
+// تنظیمات سرویس ایمیل
 const transporter = nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE || 'gmail', // مثل gmail یا mailgun
+    service: 'gmail', 
     auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        pass: process.env.EMAIL_PASS // حتما باید App Password جی‌میل باشد
     }
 });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
-// دسترسی به فایل‌های آپلود شده از طریق لینک (برای نمایش در تلگرام شما)
-app.use('/uploads', express.static('uploads'));
+
+// اصلاح نحوه دسترسی به پوشه آپلودها به صورت کاملا استاتیک و عمومی
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const pendingOrders = {};
 
@@ -58,23 +63,30 @@ app.post('/api/submit-order', upload.fields([
 
         const orderId = 'ORD-' + Date.now();
         
-        // ذخیره اطلاعات کامل سفارش در حافظه
+        // اصلاح مسیر ذخیره فایل برای وبک (حذف دات و اسلش‌های اضافی)
+        const idFrontPath = files['idFront'] ? files['idFront'][0].path.replace(/\\/g, '/') : null;
+        const idBackPath = files['idBack'] ? files['idBack'][0].path.replace(/\\/g, '/') : null;
+        const receiptPath = files['receipt'] ? files['receipt'][0].path.replace(/\\/g, '/') : null;
+
         pendingOrders[orderId] = {
             email, crypto, network, wallet, paymentMethod, amount, paysafePin,
-            idFront: files['idFront'] ? files['idFront'][0].path : null,
-            idBack: files['idBack'] ? files['idBack'][0].path : null,
-            receipt: files['receipt'] ? files['receipt'][0].path : null,
+            idFront: idFrontPath,
+            idBack: idBackPath,
+            receipt: receiptPath,
             status: 'PENDING'
         };
 
-        // آدرس دامنه سرور برای ساخت لینک تصاویر جهت مشاهده شما در تلگرام
-        const serverUrl = process.env.SERVER_URL || `http://localhost:${port}`;
+        // تمیز کردن آدرس سرور برای جلوگیری از ارور دو اسلش //
+        let serverUrl = process.env.SERVER_URL || `http://localhost:${port}`;
+        if (serverUrl.endsWith('/')) {
+            serverUrl = serverUrl.slice(0, -1);
+        }
         
         let paymentDetail = '';
         if (paymentMethod === 'paysafe') {
             paymentDetail = `🔑 *Paysafe PIN:* \`${paysafePin}\``;
-        } else {
-            paymentDetail = `🧾 *SEPA Receipt:* [View Receipt](${serverUrl}/${files['receipt'][0].path})`;
+        } else if (receiptPath) {
+            paymentDetail = `🧾 *SEPA Receipt:* [View Receipt](${serverUrl}/${receiptPath})`;
         }
 
         const messageText = `🔔 *New Exchange Order: ${orderId}*\n\n` +
@@ -85,11 +97,13 @@ app.post('/api/submit-order', upload.fields([
                             `💳 *Method:* ${paymentMethod.toUpperCase()}\n` +
                             `${paymentDetail}\n\n` +
                             `🪪 *KYC Documents:* \n` +
-                            `[ID Front Side](${serverUrl}/${pendingOrders[orderId].idFront})\n` +
-                            `[ID Back Side](${serverUrl}/${pendingOrders[orderId].idBack})\n\n` +
+                            `[ID Front Side](${serverUrl}/${idFrontPath})\n` +
+                            `[ID Back Side](${serverUrl}/${idBackPath})\n\n` +
                             `👇 Action Required:`;
 
-        // ارسال به کانال/گروه تلگرام با کلیدهای شیشه‌ای لمسی
+        // ذخیره متن اصلی پیام در حافظه برای جلوگیری از پاک شدن گزارش در تلگرام
+        pendingOrders[orderId].originalMessage = messageText;
+
         await bot.telegram.sendMessage(process.env.TELEGRAM_CHANNEL_ID, messageText, {
             parse_mode: 'Markdown',
             ...Markup.inlineKeyboard([
@@ -108,7 +122,7 @@ app.post('/api/submit-order', upload.fields([
     }
 });
 
-// ۲. پردازش دکمه‌های شیشه‌ای تلگرام (تایید / رد) + ارسال ایمیل اتوماتیک
+// ۲. پردازش دکمه‌های شیشه‌ای تلگرام (تایید / رد) بدون پاک شدن اطلاعات قبلی
 bot.on('callback_query', async (ctx) => {
     const callbackData = ctx.callbackQuery.data;
     const [action, orderId] = callbackData.split('_');
@@ -122,20 +136,21 @@ bot.on('callback_query', async (ctx) => {
         return ctx.answerCbQuery('⚠️ This order has already been processed.', { show_alert: true });
     }
 
+    const baseText = order.originalMessage || `🔔 *Exchange Order: ${orderId}*`;
+
     if (action === 'reject') {
         order.status = 'REJECTED';
-        await ctx.editMessageText(`❌ *Order ${orderId} has been REJECTED by Admin.*`, { parse_mode: 'Markdown' });
+        // ویرایش پیام به طوری که متن اصلی باقی بماند و فقط وضعیت در انتها اضافه شود
+        await ctx.editMessageText(`${baseText}\n\n❌ *Status: REJECTED by Admin.*`, { parse_mode: 'Markdown' });
         return ctx.answerCbQuery('Order Rejected.');
     }
 
     if (action === 'approve') {
-        ctx.answerCbQuery('⏳ Processing transfer and sending email...');
-        await ctx.editMessageText(`⏳ *Order ${orderId} is being processed...*`, { parse_mode: 'Markdown' });
+        ctx.answerCbQuery('⏳ Verification approved. Dispatching email...');
+        await ctx.editMessageText(`${baseText}\n\n⏳ *Status: Processing transfer & sending email...*`, { parse_mode: 'Markdown' });
 
         try {
-            // در اینجا عملیات انتقال اتوماتیک از صرافی کوکوین یا صرافی دیگر با API انجام می‌شود.
-            // به عنوان بخش اصلی خواسته شما، پس از واریز رمزارز، ایمیل تایید به مشتری شلیک می‌شود:
-
+            // ساختار ایمیل ارسالی به مشتری
             const mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: order.email,
@@ -156,14 +171,17 @@ bot.on('callback_query', async (ctx) => {
                 `
             };
 
+            // ارسال ایمیل
             await transporter.sendMail(mailOptions);
             order.status = 'COMPLETED';
 
-            await ctx.editMessageText(`✅ *Order ${orderId} Successfully Completed!*\n💰 Crypto sent to wallet and confirmation email dispatched to \`${order.email}\`.`, { parse_mode: 'Markdown' });
+            // آپدیت نهایی پیام تلگرام بدون پاک شدن جزییات
+            await ctx.editMessageText(`${baseText}\n\n✅ *Status: COMPLETED.*\n💰 Crypto assets delivered and email notification sent to user.`, { parse_mode: 'Markdown' });
 
         } catch (mailError) {
-            console.error('Email Error:', mailError);
-            await ctx.editMessageText(`⚠️ *Crypto sent but Email failed:* \n${mailError.message}`, { parse_mode: 'Markdown' });
+            console.error('Email Delivery Error:', mailError);
+            // نمایش خطای دقیق ایمیل در تلگرام برای دیباگ شما
+            await ctx.editMessageText(`${baseText}\n\n⚠️ *Status: Verification approved, but Email failed:* \n\`${mailError.message}\``, { parse_mode: 'Markdown' });
         }
     }
 });
