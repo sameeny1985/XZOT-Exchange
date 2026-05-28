@@ -9,7 +9,7 @@
         .container { max-width: 500px; margin: 0 auto; background: #1a1a24; padding: 30px; border-radius: 12px; border: 1px solid #ffdd00; box-shadow: 0 8px 24px rgba(0,0,0,0.6); position: relative; }
         
         /* Language Selector Styling */
-        .lang-switcher { position: absolute; top: 15px; right: 15px; width: auto; padding: 5px 10px; margin: 0; font-size: 12px; background: #262636; color: #fff; border: 1px solid #ffdd00; border-radius: 4px; cursor: pointer; }
+        .lang-switcher { position: absolute; top: 15px; right: 15px; width: auto; padding: 5px 10px; margin: 0; font-size: 12px; background: #262636; color: #fff; border: 1px solid #ffdd00; border-radius: 4px; cursor: pointer; z-index: 10; }
         body.rtl-mode .lang-switcher { right: auto; left: 15px; }
 
         h2 { color: #ffdd00; text-align: center; margin-bottom: 5px; margin-top: 15px; }
@@ -27,10 +27,10 @@
         .bank-box { background: #262636; border: 1px dashed #ffdd00; padding: 15px; border-radius: 6px; margin-top: 10px; font-family: monospace; font-size: 13px; text-align: left; direction: ltr; }
         #statusBox { margin-top: 20px; padding: 12px; border-radius: 6px; text-align: center; display: none; background: #10b981; color: #fff; }
         .notice { font-size: 12px; color: #ffdd00; margin-top: 5px; }
-        
+
         /* RTL Overrides for Persian */
         body.rtl-mode { direction: rtl; }
-        body.rtl-mode text-align { text-align: right; }
+        body.rtl-mode h2, body.rtl-mode p.info, body.rtl-mode h3, body.rtl-mode label, body.rtl-mode .notice, body.rtl-mode p { text-align: right; }
     </style>
 </head>
 <body>
@@ -68,10 +68,10 @@
         <div class="step" id="step2">
             <h3 style="color:#ffdd00;" id="step2Title">Step 2: Asset & Wallet</h3>
             
-            <label id="lblCrypto">Select Crypto Asset (KuCoin / Global Supported):</label>
+            <label id="lblCrypto">Select Crypto Asset :</label>
             <select id="crypto" name="crypto" onchange="updateNetworks()">
                 <option value="USDT">USDT (Tether)</option>
-                <option value="BNB">BNB (Binance Coin)</option>
+                <option value="BNB">BNB (BNB)</option>
                 <option value="SHIB">SHIB (Shiba Inu)</option>
                 <option value="BTC">BTC (Bitcoin)</option>
                 <option value="ETH">ETH (Ethereum)</option>
@@ -81,14 +81,14 @@
 
             <label id="lblNetwork">Select Network:</label>
             <select id="network" name="network" onchange="showNetworkWarning()">
-                </select>
+            </select>
             <div id="networkNotice" class="notice"></div>
 
             <label id="lblWallet">Enter Destination Wallet Address:</label>
-            <input type="text" id="wallet" name="wallet" placeholder="0x..." required>
+            <input type="text" id="wallet" name="wallet" placeholder="Enter valid address" required>
 
             <label id="lblWalletConfirm">Confirm Wallet Address:</label>
-            <input type="text" id="walletConfirm" placeholder="0x..." required>
+            <input type="text" id="walletConfirm" placeholder="Re-enter to confirm address" required>
 
             <div class="btn-group">
                 <button type="button" class="btn btn-secondary" id="btnBack1" onclick="prevStep(1)">Back</button>
@@ -111,9 +111,9 @@
             <div id="sepaPanel" style="display: block;">
                 <label id="lblSepaInstructions">Transfer money instantly to our Bank Account:</label>
                 <div class="bank-box">
-                    <strong>IBAN:</strong> BE96 0000 1111 2222<br>
-                    <strong>BIC/SWIFT:</strong> GKCCBEBBXXX<br>
-                    <strong>Holder:</strong> XZOT Exchange Group
+                    <strong>IBAN:</strong> GB86TRWI23147028358155<br>
+                    <strong>BIC/SWIFT:</strong> TRWIGB2LXXX<br>
+                    <strong>Holder:</strong> Said h Ameeny p
                 </div>
                 <label id="lblSepaUpload">Upload SEPA Instant Bank Receipt:</label>
                 <input type="file" id="receipt" name="receipt" accept="image/*,application/pdf">
@@ -138,35 +138,35 @@
 </div>
 
 <script>
-    // دیکشنری ترجمه ۴ زبانه کامل
+    // آبجکت ترجمه دقیق ۴ زبانه برای تمام المان‌های متنی فرم
     const translations = {
         en: {
             mainTitle: "XZOT Exchange", mainSubTitle: "Secure & Instant Fiat-to-Crypto Gateway (EUR Dedicated)",
             step1Title: "Step 1: Identity Verification", lblEmail: "Your Email Address (For Order Receipt):", lblIdFront: "ID Card / Passport - FRONT SIDE:", lblIdBack: "ID Card / Passport - BACK SIDE:", btnNext1: "Verify & Continue",
-            step2Title: "Step 2: Asset & Wallet", lblCrypto: "Select Crypto Asset (KuCoin / Global Supported):", lblNetwork: "Select Network:", lblWallet: "Enter Destination Wallet Address:", lblWalletConfirm: "Confirm Wallet Address:", btnBack1: "Back", btnNext2: "Continue",
+            step2Title: "Step 2: Asset & Wallet", lblCrypto: "Select Crypto Asset :", lblNetwork: "Select Network:", lblWallet: "Enter Destination Wallet Address:", lblWalletConfirm: "Confirm Wallet Address:", btnBack1: "Back", btnNext2: "Continue",
             step3Title: "Step 3: Settlement (EUR)", lblAmount: "Enter Amount to Exchange (EUR):", lblPayment: "Select Payment Method:", optSepa: "SEPA Instant Bank Transfer", optPaysafe: "Paysafecard Voucher PIN", lblSepaInstructions: "Transfer money instantly to our Bank Account:", lblSepaUpload: "Upload SEPA Instant Bank Receipt:", lblPaysafeInstructions: "Enter 16-Digit Paysafecard PIN:", pFooterNotice: "* Crypto will be released to your wallet address immediately after admin verification.", btnBack2: "Back", btnSubmit: "Submit Exchange Order",
-            walletError: "Wallet addresses do not match or are empty!", networkWarning: "Make sure your destination wallet supports ", emailAlert: "Please fill out your email.", uploadStatus: "Uploading documents and creating order...", successStatus: "✅ Order successfully sent! Crypto will be transferred upon verification.", errorStatus: "❌ Error: ", connError: "❌ Connection error to the exchange server."
+            walletError: "Wallet addresses do not match or are empty!", networkWarningPrefix: "Make sure your destination wallet supports ", networkWarningSuffix: " network!", emailAlert: "Please fill out your email.", uploadStatus: "Uploading documents and creating order...", successStatus: "✅ Order successfully sent! Crypto will be transferred upon verification.", errorStatus: "❌ Error: ", connError: "❌ Connection error to the exchange server."
         },
         fr: {
             mainTitle: "XZOT Exchange", mainSubTitle: "Passerelle Fiat-to-Crypto Sécurisée & Instantanée (Dédié EUR)",
-            step1Title: "Étape 1: Vérification d'identité", lblEmail: "Votre adresse e-mail (Pour le reçu):", lblIdFront: "Carte d'identité / Passport - RECTO:", lblIdBack: "Carte d'identité / Passport - VERSO:", btnNext1: "Vérifier & Continuer",
-            step2Title: "Étape 2: Actif & Portefeuille", lblCrypto: "Sélectionnez l'actif crypto (KuCoin / Global):", lblNetwork: "Sélectionnez le réseau:", lblWallet: "Entrez l'adresse du portefeuille de destination:", lblWalletConfirm: "Confirmez l'adresse du portefeuille:", btnBack1: "Retour", btnNext2: "Continuer",
+            step1Title: "Étape 1: Vérification d'identité", lblEmail: "Votre adresse e-mail (Pour le reçu):", lblIdFront: "Carte d'identité / Passeport - RECTO:", lblIdBack: "Carte d'identité / Passeport - VERSO:", btnNext1: "Vérifier & Continuer",
+            step2Title: "Étape 2: Actif & Portefeuille", lblCrypto: "Sélectionnez l'actif crypto :", lblNetwork: "Sélectionnez le réseau:", lblWallet: "Entrez l'adresse du portefeuille de destination:", lblWalletConfirm: "Confirmez l'adresse du portefeuille:", btnBack1: "Retour", btnNext2: "Continuer",
             step3Title: "Étape 3: Règlement (EUR)", lblAmount: "Entrez le montant à échanger (EUR):", lblPayment: "Sélectionnez le mode de paiement:", optSepa: "Virement Bancaire SEPA Instantané", optPaysafe: "Code PIN Paysafecard", lblSepaInstructions: "Transférez l'argent instantanément sur notre compte bancaire:", lblSepaUpload: "Télécharger le reçu bancaire SEPA:", lblPaysafeInstructions: "Entrez le code PIN Paysafecard à 16 chiffres:", pFooterNotice: "* Les cryptos seront libérées sur votre adresse immédiatement après vérification par l'administrateur.", btnBack2: "Retour", btnSubmit: "Soumettre la commande",
-            walletError: "Les adresses de portefeuille ne correspondent pas ou sont vides!", networkWarning: "Assurez-vous que votre portefeuille prend en charge ", emailAlert: "Veuillez remplir votre e-mail.", uploadStatus: "Téléchargement des documents et création de la commande...", successStatus: "✅ Commande envoyée avec succès! Les cryptos seront transférées après vérification.", errorStatus: "❌ Erreur: ", connError: "❌ Erreur de connexion au serveur."
+            walletError: "Les adresses de portefeuille ne correspondent pas ou sont vides!", networkWarningPrefix: "Assurez-vous que votre portefeuille prend en charge ", networkWarningSuffix: " !", emailAlert: "Veuillez remplir votre e-mail.", uploadStatus: "Téléchargement des documents et création de la commande...", successStatus: "✅ Commande envoyée avec succès! Les cryptos seront transférées après vérification.", errorStatus: "❌ Erreur: ", connError: "❌ Erreur de connexion au serveur."
         },
         nl: {
             mainTitle: "XZOT Exchange", mainSubTitle: "Veilige & Directe Fiat-naar-Crypto Gateway (EUR Dedicated)",
             step1Title: "Stap 1: Identiteitsverificatie", lblEmail: "Uw e-mailadres (Voor bestelbon):", lblIdFront: "Id-kaart / Paspoort - VOORKANT:", lblIdBack: "Id-kaart / Paspoort - ACHTERKANT:", btnNext1: "Verifieer & Doorgaan",
-            step2Title: "Stap 2: Crypto & Wallet", lblCrypto: "Selecteer Crypto Asset (KuCoin / Global):", lblNetwork: "Selecteer Netwerk:", lblWallet: "Voer het bestemmingswalletadres in:", lblWalletConfirm: "Bevestig het walletadres:", btnBack1: "Terug", btnNext2: "Doorgaan",
+            step2Title: "Stap 2: Crypto & Wallet", lblCrypto: "Selecteer Crypto Asset :", lblNetwork: "Selecteer Netwerk:", lblWallet: "Voer het bestemmingswalletadres in:", lblWalletConfirm: "Bevestig het walletadres:", btnBack1: "Terug", btnNext2: "Doorgaan",
             step3Title: "Stap 3: Afrekenen (EUR)", lblAmount: "Voer het te wisselen bedrag in (EUR):", lblPayment: "Selecteer Betaalmethode:", optSepa: "SEPA Instant Bankoverschrijving", optPaysafe: "Paysafecard Voucher PIN", lblSepaInstructions: "Maak direct geld over naar onze bankrekening:", lblSepaUpload: "Upload SEPA Instant Bankbewijs:", lblPaysafeInstructions: "Voer 16-cijferige Paysafecard-pincode in:", pFooterNotice: "* Crypto wordt onmiddellijk na verificatie door de beheerder naar uw walletadres verzonden.", btnBack2: "Terug", btnSubmit: "Bestelling Plaatsen",
-            walletError: "Walletadressen komen niet overeen of zijn leeg!", networkWarning: "Zorg ervoor dat uw bestemmingswallet ondersteuning biedt voor ", emailAlert: "Vul uw e-mailadres in.", uploadStatus: "Documenten uploaden en bestelling aanmaken...", successStatus: "✅ Bestelling succesvol verzonden! Crypto wordt overgemaakt na verificatie.", errorStatus: "❌ Fout: ", connError: "❌ Verbindingsfout met de server."
+            walletError: "Walletadressen komen niet overeen of zijn leeg!", networkWarningPrefix: "Zorg ervoor dat uw bestemmingswallet ondersteuning biedt voor ", networkWarningSuffix: "-netwerk!", emailAlert: "Vul uw e-mailadres in.", uploadStatus: "Documenten uploaden en bestelling aanmaken...", successStatus: "✅ Bestelling succesvol verzonden! Crypto wordt overgemaakt na verificatie.", errorStatus: "❌ Fout: ", connError: "❌ Verbindingsfout met de server."
         },
         fa: {
-            mainTitle: "صرافی اکس‌زات", mainSubTitle: "درگاه امن و فوری تبدیل یورو به رمزارز",
-            step1Title: "مرحله ۱: احراز هویت", lblEmail: "آدرس ایمیل شما (جهت دریافت رسید):", lblIdFront: "کارت شناسایی / پاسپورت - روی سند:", lblIdBack: "کارت شناسایی / پاسپورت - پشت سند:", btnNext1: "تایید و ادامه",
-            step2Title: "مرحله ۲: انتخاب ارز و شبکه", lblCrypto: "انتخاب رمز ارز مورد نظر:", lblNetwork: "انتخاب شبکه انتقال:", lblWallet: "آدرس کیف پول مقصد را وارد کنید:", lblWalletConfirm: "تایید مجدد آدرس کیف پول:", btnBack1: "بازگشت", btnNext2: "ادامه",
+            mainTitle: "صرافی اکس‌زات", mainSubTitle: "درگاه امن و فوری تبدیل یورو به رمزارز (ویژه یورو)",
+            step1Title: "مرحله ۱: احراز هویت", lblEmail: "آدرس ایمیل شما (جهت دریافت رسید):", lblIdFront: "کارت شناسایی / پاسپورت - روی کارت:", lblIdBack: "کارت شناسایی / پاسپورت - پشت کارت:", btnNext1: "تایید و ادامه",
+            step2Title: "مرحله ۲: انتخاب ارز و شبکه", lblCrypto: "انتخاب رمز ارز مورد نظر :", lblNetwork: "انتخاب شبکه انتقال:", lblWallet: "آدرس کیف پول مقصد را وارد کنید:", lblWalletConfirm: "تایید مجدد آدرس کیف پول:", btnBack1: "بازگشت", btnNext2: "ادامه",
             step3Title: "مرحله ۳: پرداخت یورو", lblAmount: "مبلغ مبادله را وارد کنید (یورو):", lblPayment: "روش پرداخت را انتخاب کنید:", optSepa: "انتقال بانکی فوری SEPA", optPaysafe: "کد ووچر پین پی‌سیف‌کارت", lblSepaInstructions: "پول را به صورت آنی به حساب بانکی ما واریز کنید:", lblSepaUpload: "آپلود عکس رسید بانکی SEPA:", lblPaysafeInstructions: "پین کد ۱۶ رقمی پی‌سیف‌کارت را وارد کنید:", pFooterNotice: "* رمزارز مورد نظر بلافاصله پس از تایید مدیریت به کیف پول شما واریز خواهد شد.", btnBack2: "بازگشت", btnSubmit: "ثبت و ارسال نهایی سفارش",
-            walletError: "آدرس‌های کیف پول وارد شده همخوانی ندارند یا خالی هستند!", networkWarning: "مطمئن شوید که کیف پول مقصد شما از این شبکه پشتیبانی میکند: ", emailAlert: "لطفاً آدرس ایمیل خود را وارد کنید.", uploadStatus: "در حال آپلود مدارک و ایجاد سفارش شما...", successStatus: "✅ سفارش با موفقیت ثبت شد! رمزارز پس از تایید واریز خواهد شد.", errorStatus: "❌ خطا: ", connError: "❌ خطای اتصال به سرور صرافی."
+            walletError: "آدرس‌های کیف پول وارد شده همخوانی ندارند یا خالی هستند!", networkWarningPrefix: "مطمئن شوید که کیف پول مقصد شما از ", networkWarningSuffix: " پشتیبانی می‌کند!", emailAlert: "لطفاً آدرس ایمیل خود را وارد کنید.", uploadStatus: "در حال آپلود مدارک و ایجاد سفارش شما...", successStatus: "✅ سفارش با موفقیت ثبت شد! رمزارز پس از تایید واریز خواهد شد.", errorStatus: "❌ خطا: ", connError: "❌ خطای اتصال به سرور صرافی."
         }
     };
 
@@ -180,15 +180,11 @@
             document.body.classList.remove('rtl-mode');
         }
 
-        // جایگذاری متون ترجمه شده در المان‌ها
+        // تغییر داینامیک متون تمام تگ‌های دارای آیدی مشخص شده
         for (let key in translations[lang]) {
             let el = document.getElementById(key);
             if (el) {
-                if(el.tagName === 'INPUT' && el.hasAttribute('placeholder')) {
-                    // اگر ورودی بود پلیس‌هولدر را تغییر ندهد (طراحی خراب نشود)
-                } else {
-                    el.innerText = translations[lang][key];
-                }
+                el.innerText = translations[lang][key];
             }
         }
         showNetworkWarning();
@@ -199,7 +195,7 @@
         BNB: ['BEP20 (Binance Smart Chain)'],
         SHIB: ['BEP20 (Binance Smart Chain)', 'ERC20 (Ethereum Network)'],
         BTC: ['Bitcoin'],
-        ETH: ['ERC20 (Ethereum Network)', 'Arbitrum One', 'Optimism'],
+        ETH: ['ERC20', 'Arbitrum', 'Optimism'],
         XRP: ['Ripple'],
         SOL: ['Solana']
     };
@@ -221,8 +217,9 @@
     function showNetworkWarning() {
         const crypto = document.getElementById('crypto').value;
         const network = document.getElementById('network').value;
-        const msg = translations[currentLang].networkWarning;
-        document.getElementById('networkNotice').innerText = `${msg} ${crypto} (${network})!`;
+        const prefix = translations[currentLang].networkWarningPrefix;
+        const suffix = translations[currentLang].networkWarningSuffix;
+        document.getElementById('networkNotice').innerText = `${prefix}${crypto} ${suffix} (${network})`;
     }
 
     function togglePaymentFields() {
@@ -260,8 +257,10 @@
         nextStep(3);
     }
 
+    // مقداردهی اولیه شبکه‌ها در لود اول صفحه
     updateNetworks();
 
+    // هندل ارسال فرم به بک‌اند کویب
     document.getElementById('exchangeForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         const statusBox = document.getElementById('statusBox');
