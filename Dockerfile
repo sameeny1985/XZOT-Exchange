@@ -1,7 +1,7 @@
 FROM node:18-alpine
 
-# نصب پکیج‌های مورد نیاز برای سیستم عامل مصور در صورت نیاز multer
-RUN apk add --no-cache python3 make g++
+# نصب پکیج‌های مورد نیاز سیستم عامل برای ابزارهای بیلد پکیج‌های نود جی اس
+RUN apk add --no-cache python3 make g++ gcc
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ RUN npm install --production
 
 COPY . .
 
-# ایجاد پوشه موقت آپلودها
+# ایجاد پوشه موقت آپلودها با دسترسی‌های کامل لینوکس
 RUN mkdir -p uploads
 
 EXPOSE 8080
