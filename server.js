@@ -5,6 +5,7 @@ const multer = require('multer');
 const nodemailer = require('nodemailer');
 const path = require('path');
 const fs = require('fs');
+const ccxt = require('ccxt');
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -29,6 +30,13 @@ const upload = multer({ storage: storage });
 // راه‌اندازی ربات تلگرام
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
+// پیکربندی صرافی MEXC با استفاده از کدهای API Key شما در محیط اینوایرومنت
+const mexc = new ccxt.mexc({
+    apiKey: process.env.MEXC_API_KEY,
+    secret: process.env.MEXC_SECRET_KEY,
+    enableRateLimit: true
+});
+
 // تنظیمات سرویس ایمیل
 const transporter = nodemailer.createTransport({
     service: 'gmail', 
@@ -42,12 +50,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
-// اصلاح نحوه دسترسی به پوشه آپلودها به صورت کاملا استاتیک و عمومی
+// دسترسی به پوشه آپلودها به صورت کاملا استاتیک و عمومی
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const pendingOrders = {};
 
-// ۱. دریافت فرم کامل مشتری و ارسال به تلگرام
+// ۱. دریافت فرم کامل مشتری و ارسال به تلگرام (مربوط به مسیر فیات)
 app.post('/api/submit-order', upload.fields([
     { name: 'idFront', maxCount: 1 },
     { name: 'idBack', maxCount: 1 },
@@ -63,7 +71,6 @@ app.post('/api/submit-order', upload.fields([
 
         const orderId = 'ORD-' + Date.now();
         
-        // اصلاح مسیر ذخیره فایل برای وبک (حذف دات و اسلش‌های اضافی)
         const idFrontPath = files['idFront'] ? files['idFront'][0].path.replace(/\\/g, '/') : null;
         const idBackPath = files['idBack'] ? files['idBack'][0].path.replace(/\\/g, '/') : null;
         const receiptPath = files['receipt'] ? files['receipt'][0].path.replace(/\\/g, '/') : null;
@@ -76,7 +83,6 @@ app.post('/api/submit-order', upload.fields([
             status: 'PENDING'
         };
 
-        // تمیز کردن آدرس سرور برای جلوگیری از ارور دو اسلش //
         let serverUrl = process.env.SERVER_URL || `http://localhost:${port}`;
         if (serverUrl.endsWith('/')) {
             serverUrl = serverUrl.slice(0, -1);
@@ -101,7 +107,6 @@ app.post('/api/submit-order', upload.fields([
                             `[ID Back Side](${serverUrl}/${idBackPath})\n\n` +
                             `👇 Action Required:`;
 
-        // ذخیره متن اصلی پیام در حافظه برای جلوگیری از پاک شدن گزارش در تلگرام
         pendingOrders[orderId].originalMessage = messageText;
 
         await bot.telegram.sendMessage(process.env.TELEGRAM_CHANNEL_ID, messageText, {
@@ -122,7 +127,126 @@ app.post('/api/submit-order', upload.fields([
     }
 });
 
-// ۲. پردازش دکمه‌های شیشه‌ای تلگرام (تایید / رد) بدون پاک شدن اطلاعات قبلی
+// ۳. اندپوینت جدید پردازش اتوماتیک سوآپ رمزارز به رمزارز صرافی MEXC
+app.post('/api/crypto-swap', async (req, res) => {
+    try {
+        const { email, fromAsset, toAsset, amount, wallet } = req.body;
+
+        if (!email || !fromAsset || !toAsset || !amount || !wallet) {
+            return res.status(400).json({ success: false, message: 'All fields are required.' });
+        }
+
+        // بررسی اتصال معتبر به کلیدهای مکسی
+        if (!process.env.MEXC_MASTER_DEPOSIT_WALLET) {
+            return res.status(500).json({ success: false, message: 'Exchange backend configurations are missing.' });
+        }
+
+        const swapId = 'SWAP-' + Date.now();
+
+        // ارسال اعلان سریع به ربات تلگرام جهت مانیتورینگ شما به عنوان مدیر پلتفرم
+        const monitorText = `⚡️ *[AUTO-PILOT] New Crypto Swap Request*\n\n` +
+                            `🆔 *Swap ID:* \`${swapId}\`\n` +
+                            `📧 *Client Email:* \`${email}\`\n` +
+                            `📥 *User Sends:* ${amount} ${fromAsset} (TRC20)\n` +
+                            `📤 *User Receives:* ${toAsset}\n` +
+                            `👛 *Client Target Wallet:* \`${wallet}\`\n\n` +
+                            `⏳ _Waiting for automated deposit network validation on MEXC wallet..._`;
+
+        await bot.telegram.sendMessage(process.env.TELEGRAM_CHANNEL_ID, monitorText, { parse_mode: 'Markdown' });
+
+        // فرستادن ولت اصلی مکسی ثبت شده در متغیر محیطی سرور به کاربر برای واریز تتر
+        res.json({ 
+            success: true, 
+            swapId,
+            depositAddress: process.env.MEXC_MASTER_DEPOSIT_WALLET 
+        });
+
+        // اجرای موتور پس‌زمینه بررسی اتوماتیک و واریز (به صورت موازی و آسنکرون بدون قفل کردن فرانت اند)
+        runAutoLiquidityEngine(swapId, email, fromAsset, toAsset, parseFloat(amount), wallet);
+
+    } catch (error) {
+        console.error('Swap Route Error:', error);
+        res.status(500).json({ success: false, message: 'Swap processing failed.' });
+    }
+});
+
+// موتور سنگین و هوشمند رهگیری تراکنش‌های واریزی بلاکچین در حساب مکسی، تبدیل بازار و برداشت مستقیم برای کاربر
+async function runAutoLiquidityEngine(swapId, email, fromAsset, toAsset, expectedAmount, targetWallet) {
+    let checkCount = 0;
+    const maxChecks = 30; // ۳۰ بار تلاش برای رهگیری واریز (هر ۱ دقیقه یکبار = ۳۰ دقیقه انقضای فاکتور)
+    
+    console.log(`🤖 موتور اتوپایلوت برای سفارش ${swapId} فعال شد. در حال مانیتورینگ حساب مکسی...`);
+
+    const interval = setInterval(async () => {
+        checkCount++;
+        try {
+            // خواندن تاریخچه آخرین واریزها به حساب مکسی شما از طریق API
+            const deposits = await mexc.fetchDeposits(fromAsset, undefined, 5);
+            
+            // یافتن تراکنش تتر ورودی بر اساس مقدار و وضعیت موفق آن بر روی شبکه
+            const matchingDeposit = deposits.find(d => 
+                d.amount >= expectedAmount && 
+                (d.status === 'ok' || d.status === 'successful')
+            );
+
+            if (matchingDeposit) {
+                clearInterval(interval);
+                console.log(`✅ تراکنش واریزی یافت شد! مقدار: ${matchingDeposit.amount} ${fromAsset}. شروع فرآیند خرید بازار...`);
+                
+                await bot.telegram.sendMessage(process.env.TELEGRAM_CHANNEL_ID, `💵 *[Auto-Pilot]* Deposit of ${matchingDeposit.amount} ${fromAsset} detected on MEXC! Executing market conversion...`, { parse_mode: 'Markdown' });
+
+                // ۱. فرستادن دستور خرید مارکت به صرافی مکسی (فروش تتر و خرید ارز مقصد)
+                const marketSymbol = `${toAsset}/${fromAsset}`; // ساخت جفت ارز برای مارکت مثلا BTC/USDT
+                const order = await mexc.createMarketOrder(marketSymbol, 'buy', matchingDeposit.amount);
+                
+                // ۲. کسر ۲ درصد کارمزد شخصی صرافی شما و آماده‌سازی کل موجودی برای انتقال خودکار به ولت مشتری
+                const calculatedDelivery = order.amount * 0.98;
+
+                console.log(`🔄 عملیات تبدیل در بازار انجام شد. مقدار ناخالص خریده شده: ${order.amount}. ارسال خودکار به کیف پول مشتری...`);
+
+                // ۳. استفاده از متد برداشت خودکار API مکسی برای ارسال رمزارز نهایی به آدرس ولت مقصد مشتری
+                await mexc.withdraw(toAsset, calculatedDelivery, targetWallet);
+
+                // ارسال گزارش موفقیت نهایی به تلگرام ادمین
+                const successText = `✅ *[AUTO-PILOT SUCCESS]*\n\n` +
+                                    `🆔 *Swap ID:* \`${swapId}\`\n` +
+                                    `📧 *User:* \`${email}\`\n` +
+                                    `💵 *Deposit Detected:* ${matchingDeposit.amount} ${fromAsset}\n` +
+                                    `🪙 *Swapped to:* ${calculatedDelivery} ${toAsset} (2% Fee deducted)\n` +
+                                    `✈️ *Status:* Dispatched via API to network wallet successfully!`;
+
+                await bot.telegram.sendMessage(process.env.TELEGRAM_CHANNEL_ID, successText, { parse_mode: 'Markdown' });
+
+                // ارسال ایمیل رسید اتوماتیک برای مشتری
+                try {
+                    await transporter.sendMail({
+                        from: process.env.EMAIL_USER,
+                        to: email,
+                        subject: 'Your Automated Crypto Swap is Complete! ⚡️',
+                        html: `<div style="direction: ltr; font-family: Arial; padding: 20px; border: 1px solid #ffdd00; background: #1a1a24; color: #fff; border-radius: 8px;">
+                                <h2 style="color: #ffdd00; text-align: center;">Swap Successful</h2>
+                                <p>Your crypto swap order <strong>${swapId}</strong> has been executed via autopilot.</p>
+                                <p><strong>Sent Amount:</strong> ${matchingDeposit.amount} ${fromAsset}</p>
+                                <p><strong>Delivered Amount:</strong> ${calculatedDelivery} ${toAsset}</p>
+                                <p><strong>Target Destination:</strong> ${targetWallet}</p>
+                               </div>`
+                    });
+                } catch (err) { console.error('Swap Mail Delivery failed:', err); }
+            }
+
+            if (checkCount >= maxChecks) {
+                clearInterval(interval);
+                console.log(`🛑 زمان انقضای فاکتور سفارش ${swapId} به پایان رسید.`);
+                await bot.telegram.sendMessage(process.env.TELEGRAM_CHANNEL_ID, `🛑 *[Auto-Pilot]* Swap order \`${swapId}\` expired. No matching deposit detected within 30 minutes.`, { parse_mode: 'Markdown' });
+            }
+
+        } catch (err) {
+            console.error('Error tracking liquidity inside engine:', err.message);
+        }
+    }, 60000); // تکرار بررسی اکانت صرافی به صورت مداوم در هر ۶۰ ثانیه
+}
+
+// ۲. پردازش دکمه‌های شیشه‌ای تلگرام (تایید / رد مربوط به فرم فیات و پی‌سیف قدیمی)
 bot.on('callback_query', async (ctx) => {
     const callbackData = ctx.callbackQuery.data;
     const [action, orderId] = callbackData.split('_');
@@ -140,7 +264,6 @@ bot.on('callback_query', async (ctx) => {
 
     if (action === 'reject') {
         order.status = 'REJECTED';
-        // ویرایش پیام به طوری که متن اصلی باقی بماند و فقط وضعیت در انتها اضافه شود
         await ctx.editMessageText(`${baseText}\n\n❌ *Status: REJECTED by Admin.*`, { parse_mode: 'Markdown' });
         return ctx.answerCbQuery('Order Rejected.');
     }
@@ -150,7 +273,6 @@ bot.on('callback_query', async (ctx) => {
         await ctx.editMessageText(`${baseText}\n\n⏳ *Status: Processing transfer & sending email...*`, { parse_mode: 'Markdown' });
 
         try {
-            // ساختار ایمیل ارسالی به مشتری
             const mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: order.email,
@@ -171,20 +293,32 @@ bot.on('callback_query', async (ctx) => {
                 `
             };
 
-            // ارسال ایمیل
             await transporter.sendMail(mailOptions);
             order.status = 'COMPLETED';
-
-            // آپدیت نهایی پیام تلگرام بدون پاک شدن جزییات
             await ctx.editMessageText(`${baseText}\n\n✅ *Status: COMPLETED.*\n💰 Crypto assets delivered and email notification sent to user.`, { parse_mode: 'Markdown' });
 
         } catch (mailError) {
             console.error('Email Delivery Error:', mailError);
-            // نمایش خطای دقیق ایمیل در تلگرام برای دیباگ شما
             await ctx.editMessageText(`${baseText}\n\n⚠️ *Status: Verification approved, but Email failed:* \n\`${mailError.message}\``, { parse_mode: 'Markdown' });
         }
     }
 });
 
-bot.launch();
+// سیستم هوشمند راه‌اندازی بات تلگرام برای نابود کردن خودکار خطا و کانفلیکت ۴۰۹ در دپلوهای کویب
+async function startBotWithRetry() {
+    try {
+        await bot.launch();
+        console.log('🤖 Telegram bot launched successfully!');
+    } catch (error) {
+        if (error.response && error.response.error_code === 409) {
+            console.log('⚠️ Telegram Conflict (409) detected. Retrying connection in 5 seconds...');
+            setTimeout(startBotWithRetry, 5000);
+        } else {
+            console.error('❌ Failed to launch telegram bot:', error);
+        }
+    }
+}
+
+startBotWithRetry();
+
 app.listen(port, () => console.log(`Server is running on port ${port}`));
