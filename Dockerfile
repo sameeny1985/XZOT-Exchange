@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 # نصب پکیج‌های مورد نیاز سیستم عامل برای ابزارهای بیلد پکیج‌های نود جی اس
 RUN apk add --no-cache python3 make g++ gcc
